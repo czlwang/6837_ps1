@@ -2,6 +2,8 @@
 #include "vertexrecorder.h"
 using namespace std;
 
+const float c_pi = 3.14159265358979323846f;
+
 namespace
 {
     
@@ -49,7 +51,29 @@ Surface makeSurfRev(const Curve &profile, unsigned steps)
     }
 
     // TODO: Here you should build the surface.  See surf.h for details.
+    
+    float step_size = c_pi/steps;
+    
+    for(int i = 0; i < steps; i++)
+    {
+        float theta = i*step_size;
+        std::cout << "theta " << theta << std::endl;
+        Matrix3f R( cos(theta), 0, sin(theta),
+                    0         , 1, 0,
+                   -sin(theta), 0, cos(theta));
 
+
+        for (int j = 0; j < profile.size(); j++)
+        {
+            Vector3f vertex = profile[j].V;
+            vertex = R*vertex;
+            surface.VV.push_back(vertex);
+        }
+        
+        std::cout << "vertices " << surface.VV.size() << std::endl;
+        
+    }
+    
     cerr << "\t>>> makeSurfRev called (but not implemented).\n\t>>> Returning empty surface." << endl;
  
     return surface;

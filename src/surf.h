@@ -40,7 +40,5 @@ void outputObjFile( std::ostream& out, const Surface& surface );
 
 
 
-
-
 #endif
 

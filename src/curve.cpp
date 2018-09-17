@@ -15,7 +15,31 @@ inline bool approx(const Vector3f& lhs, const Vector3f& rhs)
 }
 
 
+    static bool checkXY(const vector< Vector3f >& P)
+    {
+        for (Vector3f point : P)
+        {
+            if(point[2] != 0)
+            {
+                return false;
+            }
+        }
+        return true;
+    }
 }
+
+//globals
+//Bezier matrix
+Matrix4f B(1.0, -3.0,  3.0, -1.0,
+           0.0,  3.0, -6.0,  3.0,
+           0.0,  0.0,  3.0, -3.0,
+           0.0,  0.0,  0.0,  1.0);
+//Bspline
+Matrix4f BS6(1.0, -3.0,  3.0, -1.0,
+             4.0,  0.0, -6.0,  3.0,
+             1.0,  3.0,  3.0, -3.0,
+             0.0,  0.0,  0.0,  1.0);
+Matrix4f BS = (1.0/6.)*BS6;
 
 
 Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
@@ -26,6 +50,8 @@ Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
 		cerr << "evalBezier must be called with 3n+1 control points." << endl;
 		exit(0);
 	}
+    
+    Curve* curve = new std::vector< CurvePoint >();
 
 	// TODO:
 	// You should implement this function so that it returns a Curve
@@ -46,17 +72,73 @@ Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
 
 	cerr << "\t>>> evalBezier has been called with the following input:" << endl;
 
-	cerr << "\t>>> Control points (type vector< Vector3f >): " << endl;
-	for (int i = 0; i < (int)P.size(); ++i)
-	{
-		cerr << "\t>>> " << P[i] << endl;
-	}
+//	cerr << "\t>>> Control points (type vector< Vector3f >): " << endl;
+//	for (int i = 0; i < (int)P.size(); ++i)
+//	{
+//        cerr << "\t>>> " << P[i] << endl;
+//        cerr << "\t>>> " << P[i][0] << endl;
+//        cerr << "\t>>> " << P[i][1] << endl;
+//        cerr << "\t>>> " << P[i][2] << endl;
+//	}
+
+    //velocity matrx
+    Matrix4f B_vel(-3.0,   6.0, -3.0, 0.0,
+                    3.0, -12.0,  9.0, 0.0,
+                    0.0,   6.0, -9.0, 0.0,
+                    0.0,   0.0,  3.0, 1.0);
+    
+    int pieces = (int)(P.size()-1)/3;
+    for (int i = 0; i < pieces; i++)
+    {
+//        std::cout << "iteration " << i << std::endl;
+//        std::cout << "P size " << P.size() << std::endl;
+
+        Vector4f p1(P[3*i], 0.0);
+        Vector4f p2(P[3*i+1], 0.0);
+        Vector4f p3(P[3*i+2], 0.0);
+        Vector4f p4(P[3*i+3], 0.0);
+        Matrix4f G(p1, p2, p3, p4, true);//geometry matrix - set of points
+        
+        Vector3f binormal(0,0,1);
+        
+        for (int j=0; j <= (int)steps; j++)
+        {
+            float t = ((float)j)/steps;
+            Vector4f Monomial(1, t, pow(t, 2), pow(t, 3));
+            Vector3f V = (G*B*Monomial).xyz();//vertex
+            Vector3f T = (G*B_vel*Monomial).xyz();//tangent
+            T.normalize();
+//            std::cout << "T " << T[0] << " " << T[1] << " " << T[2] << std::endl;
+            
+            Vector3f N;
+            N = Vector3f::cross(binormal, T);
+            N.normalize();
+//            std::cout << "N " << N[0] << " " << N[1] << " " << N[2] << std::endl;
+            
+            binormal = Vector3f::cross(T, N);
+            binormal.normalize();
+//            std::cout << "binormal " << binormal[0] << " " << binormal[1] << " " << binormal[2] << std::endl;
+            
+            CurvePoint* point = new CurvePoint();
+            point->V = V;
+            point->T = T;
+            point->B = binormal;
+            point->N = N;
+            curve->push_back(*point);
+        }
+
+    }
+    
+    //loop through and get the points 4 at a time.
+    //get a 3x4 matrix of control points - G
+    //spline matrix - 4x4 - B
+    //multiply by T for each t in time steps
 
 	cerr << "\t>>> Steps (type steps): " << steps << endl;
 	cerr << "\t>>> Returning empty curve." << endl;
 
 	// Right now this will just return this empty curve.
-	return Curve();
+	return *curve;
 }
 
 Curve evalBspline(const vector< Vector3f >& P, unsigned steps)
@@ -67,6 +149,8 @@ Curve evalBspline(const vector< Vector3f >& P, unsigned steps)
 		cerr << "evalBspline must be called with 4 or more control points." << endl;
 		exit(0);
 	}
+    
+    Curve* curve = new std::vector< CurvePoint >();
 
 	// TODO:
 	// It is suggested that you implement this function by changing
@@ -75,17 +159,42 @@ Curve evalBspline(const vector< Vector3f >& P, unsigned steps)
 
 	cerr << "\t>>> evalBSpline has been called with the following input:" << endl;
 
-	cerr << "\t>>> Control points (type vector< Vector3f >): " << endl;
-	for (int i = 0; i < (int)P.size(); ++i)
-	{
-		cerr << "\t>>> " << P[i] << endl;
-	}
+//	cerr << "\t>>> Control points (type vector< Vector3f >): " << endl;
+//	for (int i = 0; i < (int)P.size(); ++i)
+//	{
+//		cerr << "\t>>> " << P[i] << endl;
+//	}
+
+    int pieces = (int)P.size()-3;
+    for (int i = 0; i < pieces; i++)
+    {
+//        std::cout << "iteration " << i << std::endl;
+//        std::cout << "P size " << P.size() << std::endl;
+        
+        Vector4f p1(P[i], 0.0);
+        Vector4f p2(P[i+1], 0.0);
+        Vector4f p3(P[i+2], 0.0);
+        Vector4f p4(P[i+3], 0.0);
+        Matrix4f G(p1, p2, p3, p4, true);//geometry matrix - set of points
+        G = G*BS*B.inverse();
+        vector< Vector3f > control_points;
+        
+        for(int k = 0; k < 4; k++)
+        {
+            control_points.push_back(G.getCol(k).xyz());
+        }
+        
+        Curve bezier_curve = evalBezier(control_points, steps);
+//        std::cout << "bezier curve size " << curve->size() << std::endl;
+        curve->insert(curve->end(), bezier_curve.begin(), bezier_curve.end());
+    }
 
 	cerr << "\t>>> Steps (type steps): " << steps << endl;
 	cerr << "\t>>> Returning empty curve." << endl;
 
 	// Return an empty curve right now.
-	return Curve();
+//    std::cout << "curve size " << curve->size() << std::endl;
+	return *curve;
 }
 
 Curve evalCircle(float radius, unsigned steps)
