@@ -42,7 +42,7 @@ Surface quad() {
 Surface makeSurfRev(const Curve &profile, unsigned steps)
 {
     Surface surface;
-	surface = quad();
+//	surface = quad();
     
     if (!checkFlat(profile))
     {
@@ -51,38 +51,102 @@ Surface makeSurfRev(const Curve &profile, unsigned steps)
     }
 
     // TODO: Here you should build the surface.  See surf.h for details.
-    
-    float step_size = c_pi/steps;
+    //steps = 10;
+    float step_size = 2*c_pi/steps;
     
     for(int i = 0; i < steps; i++)
     {
         float theta = i*step_size;
-        std::cout << "theta " << theta << std::endl;
+//        std::cout << "theta " << theta << std::endl;
         Matrix3f R( cos(theta), 0, sin(theta),
                     0         , 1, 0,
                    -sin(theta), 0, cos(theta));
 
-
-        for (int j = 0; j < profile.size(); j++)
+        Matrix3f NR = R.inverse();
+        NR.transpose();
+        
+        for (int j = 0; j < (int)profile.size(); j++)
         {
             Vector3f vertex = profile[j].V;
             vertex = R*vertex;
             surface.VV.push_back(vertex);
+            
+            Vector3f normal = profile[j].N;
+            normal = -1*NR*normal;
+            surface.VN.push_back(normal);
+            
+//            std::cout << vertex[0] << " " << vertex[1] << " " << vertex[2] << std::endl;
         }
         
-        std::cout << "vertices " << surface.VV.size() << std::endl;
+//        std::cout << "vertices " << surface.VV.size() << std::endl;
         
     }
     
-    cerr << "\t>>> makeSurfRev called (but not implemented).\n\t>>> Returning empty surface." << endl;
+    
+    int n_vertices = profile.size();
+    //steps = 3;
+    //n_vertices = 6;
+    for(int k = 0; k < steps - 1; k++)
+    {
+        for(int l = 1; l < n_vertices; l++)
+        {
+            int m = n_vertices*k;
+            surface.VF.push_back(Tup3u(m + l, m + l + n_vertices, m + l + n_vertices - 1));
+//            std::cout << m + l << " " << m + l + n_vertices - 1 << " " << m + l - 1 << std::endl;
+//            std::cout << m + l << " " << m + l + n_vertices << " " << m + l + n_vertices - 1 << std::endl;
+            surface.VF.push_back(Tup3u(m + l, m + l + n_vertices - 1, m + l - 1));
+        }
+    }
+    //the last case: k = steps-1
+    for(int l = 1; l < n_vertices; l++)
+    {
+        int m = n_vertices*(steps-1);
+        surface.VF.push_back(Tup3u(m+l, l , l - 1));
+//        std::cout << m+l << " " << l << " " << l - 1 << std::endl;
+        surface.VF.push_back(Tup3u(m+l, l - 1, m + l - 1));
+//        std::cout << m+l << " " << l-1 << " " << m + l - 1 << std::endl;
+//        std::cout << "vertices " << surface.VV.size() << std::endl;
+    }
+    
+    std::cout << "steps * n_vertices " << steps*n_vertices << " total vertices " << surface.VV.size() << std::endl;
+//    cerr << "\t>>> makeSurfRev called (but not implemented).\n\t>>> Returning empty surface." << endl;
  
     return surface;
+//    return Surface();
+}
+
+void addFaces(const Curve &profile, int steps, Surface* surface)
+{
+    int n_vertices = profile.size();
+    //steps = 3;
+    //n_vertices = 6;
+    for(int k = 0; k < steps - 1; k++)
+    {
+        for(int l = 1; l < n_vertices; l++)
+        {
+            int m = n_vertices*k;
+            surface->VF.push_back(Tup3u(m + l, m + l + n_vertices, m + l + n_vertices - 1));
+            //            std::cout << m + l << " " << m + l + n_vertices - 1 << " " << m + l - 1 << std::endl;
+            //            std::cout << m + l << " " << m + l + n_vertices << " " << m + l + n_vertices - 1 << std::endl;
+            surface->VF.push_back(Tup3u(m + l, m + l + n_vertices - 1, m + l - 1));
+        }
+    }
+    //the last case: k = steps-1
+    for(int l = 1; l < n_vertices; l++)
+    {
+        int m = n_vertices*(steps-1);
+        surface->VF.push_back(Tup3u(m+l, l , l - 1));
+        //        std::cout << m+l << " " << l << " " << l - 1 << std::endl;
+        surface->VF.push_back(Tup3u(m+l, l - 1, m + l - 1));
+        //        std::cout << m+l << " " << l-1 << " " << m + l - 1 << std::endl;
+        //        std::cout << "vertices " << surface.VV.size() << std::endl;
+    }
 }
 
 Surface makeGenCyl(const Curve &profile, const Curve &sweep )
 {
     Surface surface;
-	surface = quad();
+//	surface = quad();
 
     if (!checkFlat(profile))
     {
@@ -90,10 +154,35 @@ Surface makeGenCyl(const Curve &profile, const Curve &sweep )
         exit(0);
     }
 
-    // TODO: Here you should build the surface.  See surf.h for details.
+    int steps = sweep.size();
+    for(int i = 0; i < steps; i++)
+    {
 
+        Vector4f sweepN(sweep[i].N, 0);
+        Vector4f sweepB(sweep[i].B, 0);
+        Vector4f sweepT(sweep[i].T, 0);
+        Vector4f sweepV(sweep[i].V, 1);
+        Matrix4f M(sweepN, sweepB, sweepT, sweepV);
+        
+        Matrix3f NR = M.getSubmatrix3x3(0, 0).inverse();
+        NR.transpose();
+        
+        for (int j = 0; j < (int)profile.size(); j++)
+        {
+            Vector4f profile_vertex = Vector4f(profile[j].V, 1);
+            Vector3f vertex = (M*profile_vertex).xyz();
+            surface.VV.push_back(vertex);
+            
+            Vector3f normal = profile[j].N;
+            normal = -1*NR*normal;
+            surface.VN.push_back(normal);
+        }
+    }
+    
+    addFaces(profile, steps, &surface);
+    
     cerr << "\t>>> makeGenCyl called (but not implemented).\n\t>>> Returning empty surface." <<endl;
-
+    
     return surface;
 }
 

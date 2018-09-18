@@ -14,18 +14,19 @@ inline bool approx(const Vector3f& lhs, const Vector3f& rhs)
 	return (lhs - rhs).absSquared() < eps;
 }
 
-
-    static bool checkXY(const vector< Vector3f >& P)
+static bool checkXY(const vector< Vector3f >& P)
+{//question: does something still live in the xy plane after being transformed. and vice versa. 
+    std::cout << "checking for xy plane " << std::endl;
+    for (Vector3f point : P)
     {
-        for (Vector3f point : P)
+        if(point[2] != 0)
         {
-            if(point[2] != 0)
-            {
-                return false;
-            }
+            return false;
         }
-        return true;
     }
+    return true;
+}
+    
 }
 
 //globals
@@ -52,6 +53,8 @@ Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
 	}
     
     Curve* curve = new std::vector< CurvePoint >();
+    
+    bool liesInXY = checkXY(P);
 
 	// TODO:
 	// You should implement this function so that it returns a Curve
@@ -85,7 +88,7 @@ Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
     Matrix4f B_vel(-3.0,   6.0, -3.0, 0.0,
                     3.0, -12.0,  9.0, 0.0,
                     0.0,   6.0, -9.0, 0.0,
-                    0.0,   0.0,  3.0, 1.0);
+                    0.0,   0.0,  3.0, 0.0);
     
     int pieces = (int)(P.size()-1)/3;
     for (int i = 0; i < pieces; i++)
@@ -117,6 +120,14 @@ Curve evalBezier(const vector< Vector3f >& P, unsigned steps)
             
             binormal = Vector3f::cross(T, N);
             binormal.normalize();
+            
+            if(liesInXY)
+            {
+                std::cout << "lies in xy" << std::endl;
+                binormal = Vector3f(0,0,1);
+                N = Vector3f::cross(binormal, T);
+                N.normalize();
+            }
 //            std::cout << "binormal " << binormal[0] << " " << binormal[1] << " " << binormal[2] << std::endl;
             
             CurvePoint* point = new CurvePoint();
