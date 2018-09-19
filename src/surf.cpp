@@ -118,16 +118,16 @@ Surface makeSurfRev(const Curve &profile, unsigned steps)
 void addFaces(const Curve &profile, int steps, Surface* surface)
 {
     int n_vertices = profile.size();
-    //steps = 3;
-    //n_vertices = 6;
+//    steps = 3;
+//    n_vertices = 6;
     for(int k = 0; k < steps - 1; k++)
     {
         for(int l = 1; l < n_vertices; l++)
         {
             int m = n_vertices*k;
             surface->VF.push_back(Tup3u(m + l, m + l + n_vertices, m + l + n_vertices - 1));
-            //            std::cout << m + l << " " << m + l + n_vertices - 1 << " " << m + l - 1 << std::endl;
-            //            std::cout << m + l << " " << m + l + n_vertices << " " << m + l + n_vertices - 1 << std::endl;
+//            std::cout << m + l << " " << m + l + n_vertices - 1 << " " << m + l - 1 << std::endl;
+//            std::cout << m + l << " " << m + l + n_vertices << " " << m + l + n_vertices - 1 << std::endl;
             surface->VF.push_back(Tup3u(m + l, m + l + n_vertices - 1, m + l - 1));
         }
     }
@@ -136,9 +136,9 @@ void addFaces(const Curve &profile, int steps, Surface* surface)
     {
         int m = n_vertices*(steps-1);
         surface->VF.push_back(Tup3u(m+l, l , l - 1));
-        //        std::cout << m+l << " " << l << " " << l - 1 << std::endl;
+//        std::cout << m+l << " " << l << " " << l - 1 << std::endl;
         surface->VF.push_back(Tup3u(m+l, l - 1, m + l - 1));
-        //        std::cout << m+l << " " << l-1 << " " << m + l - 1 << std::endl;
+//        std::cout << m+l << " " << l-1 << " " << m + l - 1 << std::endl;
         //        std::cout << "vertices " << surface.VV.size() << std::endl;
     }
 }
